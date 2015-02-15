@@ -1,0 +1,101 @@
+#!/bin/bash
+source /etc/salt/environments.d/${SALT_SAFEGUARD_ENV}.conf
+
+function expand_targets() {
+	if [ -n "$( echo $1 | grep '\.' )" ] && [  "$( echo $1 | grep -o '\.' | wc -l )" -eq 2  ]; then
+                # if already FQDN - then just passthrough
+                TARGETSGLOB=$1
+        elif [[ "$1" == $ENV_HOST_SHORTNAME_MASK ]] && [ -z "$( echo $1 | grep '\.')" ]; then
+                # if $(hostname -s) and contains environment prefix/suffix - then add domain part
+                TARGETSGLOB="${1}.${ENV_HOST_DOMAIN}"
+        elif [ -z "$( echo $1 | grep '\.')" ] && [ -z "$( echo $1 | grep '-')" ]; then
+                # if shorthost without env prefix/suffix - then add it
+                TARGETSGLOB="$( echo "$ENV_HOST_SHORTNAME_MASK" | sed -r 's/\*/'$1'/g' ).${ENV_HOST_DOMAIN}"
+	else 
+		# passthrough
+		TARGETSGLOB=$1
+	fi
+	# validate that expanded hostname is fqdn and passes environment hostname mask
+	if [  "$( echo $TARGETSGLOB | grep -o '\.' | wc -l )" -eq 2  ] && [[ "$TARGETSGLOB" == $ENV_HOST_SHORTNAME_MASK ]]; then
+		# pass it on
+		TARGETSGLOB=$TARGETSGLOB
+		echo -e "\nTARGET(s): $TARGETSGLOB\n"
+	else
+		# fail
+		echo -e "\nERROR: hostname $TARGETSGLOB does not confirm to selected environment hostname mask (${ENV_HOST_SHORTNAME_MASK}.${ENV_HOST_DOMAIN})! Aborting!\n"
+		TARGETSGLOB="FAILED"
+	fi
+}
+
+function salt() {
+	local TARGETS=$1
+	local STATE=$2
+	local OUTMODE="mixed"
+	expand_targets $TARGETS
+	if [ "$TARGETSGLOB" != "FAILED" ]; then
+        	sudo /usr/bin/salt $TARGETSGLOB state.sls $STATE env=${ENV_SALT_ID} --state-output=${OUTMODE} test=True
+		echo
+	fi
+}
+
+function salt-diff() {
+	local TARGETS=$1
+	local STATE=$2
+	local OUTMODE="changes"
+	expand_targets $TARGETS
+	if [ "$TARGETSGLOB" != "FAILED" ]; then
+        	sudo /usr/bin/salt $TARGETSGLOB state.sls $STATE env=${ENV_SALT_ID} --state-output=${OUTMODE} test=True
+		echo
+	fi
+}
+
+function salt-apply() {
+	local TARGETS=$1
+	local STATE=$2
+	local OUTMODE="changes"
+	expand_targets $TARGETS
+	if [ "$TARGETSGLOB" != "FAILED" ]; then
+		echo -e "Fetching changes overview...\n"	
+        	sudo /usr/bin/salt $TARGETSGLOB state.sls $STATE env=${ENV_SALT_ID} --state-output=${OUTMODE} test=True
+        	echo
+		read -p 'Should we apply changes to the system? [y/n]: ' response
+		if printf "%s\n" "$response" | grep -Eq "$(locale yesexpr)"; then
+			echo 
+			sudo /usr/bin/salt $TARGETSGLOB state.sls $STATE env=${ENV_SALT_ID} --state-output=${OUTMODE} test=False
+			echo 
+		fi
+	fi
+}
+
+function salt-ping() {
+	local TARGETS=$1
+	expand_targets $TARGETS
+	if [ "$TARGETSGLOB" != "FAILED" ]; then
+		sudo /usr/bin/salt $TARGETSGLOB test.ping
+		echo
+	fi
+}
+
+function help() {
+cat << EOF 
+
+Usage:
+	<cmd> <targets> [state.name]
+
+commands:
+
+	salt-ping <targets>			# Issue PING test on target(s)
+        salt <targets> <state.name>		# Issue state check on target(s)
+	salt-diff <targets> <state.name>	# Issue state check on target(s) with config diffs shown
+	salt-apply <targets> <state.name>	# Apply state on target(s)
+	help					# Show usage instructions
+
+targets:
+
+	* can be any host inside this environment - matching the environment hostfilter
+	* wildcarding is supported - ie prd-*.domain.example is a valid match/mask for all hosts inside prd environment
+	* short hostnames expansion is supported - ie both host01 and prd-host01 will be expanded to fqdn inside selected environment 
+
+EOF
+}
+

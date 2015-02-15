@@ -1,0 +1,52 @@
+#!/bin/bash
+set -e 
+
+function enter_env () {
+	local ENV_FILE="${1}.conf"
+	source /etc/salt/environments.d/${ENV_FILE}
+	export SALT_SAFEGUARD_ENV=$ENV_NAME
+	export PS1="${ENV_COLOR}[ ${ENV_NAME} ]\\$\e[0m "
+	sed -i '$ a source \/usr\/lib\/salt-safeguard\/salt-safeguard.wrapper' ~/.bashrc
+	/bin/bash
+	sed -i '/^source \/usr\/lib\/salt-safeguard\/salt-safeguard.wrapper/d' ~/.bashrc
+}
+
+function list_env () {
+	ENV_LIST="$( cd /etc/salt/environments.d/ && ls *.conf )"
+	for i in $ENV_LIST; do
+		source /etc/salt/environments.d/${i}
+		LINE=$( printf "%-24s %-50s %14s %s" "$ENV_NAME" "$ENV_DESC" "hostmask:" "${ENV_HOST_SHORTNAME_MASK}.${ENV_HOST_DOMAIN}" )
+		echo -e "${ENV_COLOR} $LINE\e[0m"
+	done
+}
+
+function usage () {
+	echo -e "\nUsage: $(basename $0) <command>\n"
+cat << EOF
+Commands:
+
+	enter <env> 	# Enter into salt environment
+	list		# List available environments
+	help | usage	# Show usage instructions
+
+EOF
+}
+
+### MAIN
+while :
+do
+    case "$1" in
+	enter)		enter_env $2
+			break
+			;;
+	list)		list_env
+			break
+			;;
+	help | usage)	usage
+			break
+			;;
+	*)  		usage
+			break
+			;;
+    esac
+done

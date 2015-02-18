@@ -11,6 +11,10 @@ Features:
 ## Setup
 
 ```bash
+# install jq dependency (needs EPEL7 repo on CentOS7)
+yum install -y http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
+yum install -y jq
+
 # clone salt-safeguard git repo
 git clone https://github.com/opennode/salt-safeguard.git
 cd salt-safeguard
@@ -95,12 +99,13 @@ commands:
 	salt <targets> <state.name>		# Issue state check on target(s)
 	salt-diff <targets> <state.name>	# Issue state check on target(s) with config diffs shown
 	salt-apply <targets> <state.name>	# Apply state on target(s)
-
+	salt-list-states			# List available state files
+	help					# Show usage instructions
 
 targets:
 
 	* can be any host inside this environment - matching the environment hostfilter
-	* salt targets wildcarding is supported - ie prd-*.domain.example is a valid match/mask for all hosts inside prd environment
+	* wildcarding is supported - ie prd-*.domain.example is a valid match/mask for all hosts inside prd environment
 	* short hostnames expansion is supported - ie both host01 and prd-host01 will be expanded to fqdn inside selected environment
  
 ```

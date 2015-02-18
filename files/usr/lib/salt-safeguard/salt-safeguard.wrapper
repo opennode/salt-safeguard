@@ -27,6 +27,35 @@ function expand_targets() {
 	fi
 }
 
+function yaml_to_json() {
+	local YAMLFILE=$1
+	/usr/bin/python -c 'import sys, yaml, json; json.dump(yaml.load(sys.stdin), sys.stdout, indent=4)' < $YAMLFILE
+}
+
+function get_env_fileroots() {
+	local SALTENV=$1
+ 	local YAMLFILE=$2
+	yaml_to_json $YAMLFILE | /usr/bin/jq -r '.file_roots | .'$SALTENV' | @sh' 2>/dev/null
+}
+
+function get_sls_from_path() {
+	local SLSPATH=$( echo $1 | tr -d \' )
+	for i in $( find $SLSPATH -type f -name '*.sls' ); do
+		SLSFILE=$( echo "${i#$SLSPATH}" | tr '/' '.' )
+		SLSFILE=$( echo "${SLSFILE#.}" )
+		SLSFILE=$( echo "${SLSFILE%.sls}" )
+		SLSFILE=$( echo "${SLSFILE%.init}" )
+		echo $SLSFILE
+	done
+}
+
+function salt-list-states() {
+	YAMLFILE=/etc/salt/master.d/master-environments.conf
+	for i in $( get_env_fileroots ${ENV_SALT_ID} $YAMLFILE ); do
+		get_sls_from_path $i | grep -Ev 'pillar.' | grep -Ev '.macros'
+	done
+}
+
 function salt() {
 	local TARGETS=$1
 	local STATE=$2
@@ -88,6 +117,7 @@ commands:
         salt <targets> <state.name>		# Issue state check on target(s)
 	salt-diff <targets> <state.name>	# Issue state check on target(s) with config diffs shown
 	salt-apply <targets> <state.name>	# Apply state on target(s)
+	salt-list-states			# List available state files
 	help					# Show usage instructions
 
 targets:

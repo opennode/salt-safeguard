@@ -1,0 +1,8 @@
+#!/bin/bash
+
+FQDN_WILDCARD_MASK=$1
+
+for i in $( /usr/bin/salt-key --list accepted ); do 
+	[[ "$i" == $FQDN_WILDCARD_MASK ]] && echo $i 
+done
+exit 0

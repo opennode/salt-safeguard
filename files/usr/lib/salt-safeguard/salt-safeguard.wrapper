@@ -52,11 +52,41 @@ function get_sls_from_path() {
 	done
 }
 
+function salt-list() {
+	local LISTTARGET=$1
+	
+	case $LISTTARGET in 
+		"states")
+			salt-list-states
+			;;
+		"hosts" | "minions")	
+			salt-list-hosts | tail -n +2 | sort
+			;;
+		*) echo "Unknown list target. Aborting."
+	esac	 
+}
+
 function salt-list-states() {
-	YAMLFILE=/etc/salt/master.d/master-environments.conf
+	local YAMLFILE=/etc/salt/master.d/master-environments.conf
+	
 	for i in $( get_env_fileroots ${ENV_SALT_ID} $YAMLFILE ); do
 		get_sls_from_path $i | grep -Ev 'pillar.' | grep -Ev '.macros'
 	done
+}
+
+function salt-list-hosts() {
+	# hostlist function implementation through salt ping (slow and hence deprecated)
+	#local TARGETS='*'
+	#for i in $( salt-ping $TARGETS ); do 
+	#	[[ "$i" == $ENV_HOST_SHORTNAME_MASK ]] && echo $( echo $i | tr -d ':' )
+	#done
+
+	local FQDN_WILDCARD_MASK="${ENV_HOST_SHORTNAME_MASK}.${ENV_HOST_DOMAIN}"
+	
+	# check for that corresponding sudo rule exists - otherwise do nothing (in order to avoid sudo passwd prompt)  
+	if [ -n "$( sudo -l | awk '/salt-safeguard-hostlist .*'$SALT_ENV_ID'.*\.'$ENV_HOST_DOMAIN'/' )" ]; then
+		sudo /usr/sbin/salt-safeguard-hostlist $FQDN_WILDCARD_MASK
+	fi
 }
 
 function salt() {
@@ -68,6 +98,29 @@ function salt() {
         	sudo /usr/bin/salt $TARGETSGLOB state.sls $STATE env=${ENV_SALT_ID} --state-output=${OUTMODE} test=True
 		echo
 	fi
+} && complete -o nospace -F _salt_autocomplete salt
+
+function _salt_autocomplete() {
+  	local cur prev
+
+	prev="${COMP_WORDS[COMP_CWORD-1]}"
+	if [[ "$prev" == salt* ]]; then
+  		local TARGETS=$( salt-list-hosts )
+  		COMPREPLY=()
+  		cur="${COMP_WORDS[COMP_CWORD]}"
+  		COMPREPLY=( $(compgen -W "${TARGETS}" -- ${cur}) )
+  	fi
+	
+	if [ ${#COMP_WORDS[@]} -eq 3 ]; then
+		prev="${COMP_WORDS[COMP_CWORD-2]}"
+		if [[ "$prev" == salt* ]]; then
+			local STATES=$( salt-list-states )
+			COMPREPLY=()
+			cur="${COMP_WORDS[COMP_CWORD]}"
+			COMPREPLY=( $(compgen -W "${STATES}" -- ${cur}) )
+		fi
+	fi
+	return 0
 }
 
 function salt-diff() {
@@ -79,7 +132,7 @@ function salt-diff() {
         	sudo /usr/bin/salt $TARGETSGLOB state.sls $STATE env=${ENV_SALT_ID} --state-output=${OUTMODE} test=True
 		echo
 	fi
-}
+} && complete -o nospace -F _salt_autocomplete salt-diff
 
 function salt-apply() {
 	local TARGETS=$1
@@ -97,7 +150,7 @@ function salt-apply() {
 			echo 
 		fi
 	fi
-}
+} && complete -o nospace -F _salt_autocomplete salt-apply
 
 function salt-ping() {
 	local TARGETS=$1
@@ -106,7 +159,7 @@ function salt-ping() {
 		sudo /usr/bin/salt $TARGETSGLOB test.ping
 		echo
 	fi
-}
+} && complete -o nospace -F _salt_autocomplete salt-ping
 
 function help() {
 cat << EOF 
@@ -117,17 +170,22 @@ Usage:
 commands:
 
 	salt-ping <targets>			# Issue PING test on target(s)
-        salt <targets> <state.name>		# Issue state check on target(s)
-	salt-diff <targets> <state.name>	# Issue state check on target(s) with config diffs shown
-	salt-apply <targets> <state.name>	# Apply state on target(s)
-	salt-list-states			# List available state files
+        salt <targets> <state>			# Issue state check on target(s)
+	salt-diff <targets> <state>		# Issue state check on target(s) with config diffs shown
+	salt-apply <targets> <state>		# Apply state on target(s)
+	salt-list states | hosts		# List available states or hosts (minions)
 	help					# Show usage instructions
 
 targets:
 
 	* can be any host inside this environment - matching the environment hostfilter
 	* wildcarding is supported - ie prd-*.domain.example is a valid match/mask for all hosts inside prd environment
+	* tab autocompletion is supported for hosts lookup
 	* short hostnames expansion is supported - ie both host01 and prd-host01 will be expanded to fqdn inside selected environment 
+
+state:
+	* name of the state to run - that is available under current environment 
+	* tab autocompletion is supported for state files lookup
 
 EOF
 }

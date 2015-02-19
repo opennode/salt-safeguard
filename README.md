@@ -25,6 +25,8 @@ cp -p files/usr/lib/salt-safeguard/salt-safeguard.wrapper /usr/lib/salt-safeguar
 chown root:root /usr/lib/salt-safeguard/salt-safeguard.wrapper
 cp -p files/usr/bin/salt-safeguard /usr/bin/
 chown root:root /usr/bin/salt-safeguard
+cp -p files/usr/sbin/salt-safeguard-hostlist /usr/sbin/
+chown root:root /usr/sbin/salt-safeguard-hostlist
 
 # OPTIONAL but recommended: add "test: True" into salt master config
 vim /etc/salt/master.d/master-environments.conf
@@ -64,8 +66,10 @@ visudo -f /etc/salt/environments.d/prd.domain.example.sudo
 Cmnd_Alias PRD_SALT_RW_CMD=/usr/bin/salt prd-*.domain.example state.sls * env=prd --state-output=* test=False
 Cmnd_Alias PRD_SALT_RO_CMD=/usr/bin/salt prd-*.domain.example state.sls * env=prd --state-output=* test=True
 Cmnd_Alias PRD_SALT_PI_CMD=/usr/bin/salt prd-*.domain.example test.ping
+Cmnd_Alias PRD_SALT_HL_CMD=/usr/sbin/salt-safeguard-hostlist prd-*.domain.example
 %saltusers ALL=(root) NOPASSWD: PRD_SALT_RO_CMD 
-%saltusers ALL=(root) NOPASSWD: PRD_SALT_PI_CMD 
+%saltusers ALL=(root) NOPASSWD: PRD_SALT_PI_CMD
+%saltusers ALL=(root) NOPASSWD: PRD_SALT_HL_CMD 
 %saltmasters ALL=(root) PASSWD: PRD_SALT_RW_CMD 
 --- EXAMPLE ---
 
@@ -96,16 +100,21 @@ Usage:
 commands:
 
 	salt-ping <targets>			# Issue PING test on target(s)
-	salt <targets> <state.name>		# Issue state check on target(s)
-	salt-diff <targets> <state.name>	# Issue state check on target(s) with config diffs shown
-	salt-apply <targets> <state.name>	# Apply state on target(s)
-	salt-list-states			# List available state files
+	salt <targets> <state>			# Issue state check on target(s)
+	salt-diff <targets> <state>		# Issue state check on target(s) with config diffs shown
+	salt-apply <targets> <state>		# Apply state on target(s)
+	salt-list states | hosts		# List available states or hosts (minions)
 	help					# Show usage instructions
 
 targets:
 
 	* can be any host inside this environment - matching the environment hostfilter
 	* wildcarding is supported - ie prd-*.domain.example is a valid match/mask for all hosts inside prd environment
+	* tab autocompletion is supported for hosts lookup
 	* short hostnames expansion is supported - ie both host01 and prd-host01 will be expanded to fqdn inside selected environment
- 
+
+state:
+	* name of the state to run - that is available under current environment
+	* tab autocompletion is supported for state files lookup
+
 ```

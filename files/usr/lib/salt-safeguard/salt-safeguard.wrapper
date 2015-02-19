@@ -1,5 +1,7 @@
 #!/bin/bash
-source /etc/salt/environments.d/${SALT_SAFEGUARD_ENV}.conf
+
+# load environment config file
+[ -f /etc/salt/environments.d/${SALT_SAFEGUARD_ENV}.conf ] && source /etc/salt/environments.d/${SALT_SAFEGUARD_ENV}.conf
 
 function expand_targets() {
 	if [ -n "$( echo $1 | grep '\.' )" ] && [  "$( echo $1 | grep -o '\.' | wc -l )" -eq 2  ]; then

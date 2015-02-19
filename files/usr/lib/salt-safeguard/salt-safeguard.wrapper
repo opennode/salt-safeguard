@@ -1,4 +1,5 @@
 #!/bin/bash
+set -f
 
 # load environment config file
 [ -f /etc/salt/environments.d/${SALT_SAFEGUARD_ENV}.conf ] && source /etc/salt/environments.d/${SALT_SAFEGUARD_ENV}.conf

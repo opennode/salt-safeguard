@@ -7,6 +7,7 @@ Features:
 * make change execution explicit (enforcing that by default salt states are run with test=True flag set)
 * enforcing safe change process (ie multi-step process where changes get presented and user confirmation is requested before these changes are actually being applied to the system)
 * short hostname expansion within current work environment scope - ie when entering into prd environment, short hostnames host01 and prd-host01 will be expanded into FQDN hostname (ie prd-host01.domain.example)
+* tab autocompletion support for target hosts and states under environment shell
 
 ## Setup
 

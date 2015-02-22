@@ -5,7 +5,7 @@ function enter_env () {
 	local ENV_FILE="${1}.conf"
 	source /etc/salt/environments.d/${ENV_FILE}
 	export SALT_SAFEGUARD_ENV=$ENV_NAME
-	export PS1="${ENV_COLOR}[ ${ENV_NAME} ]\\$\e[0m "
+	export PS1="\[${ENV_COLOR}\][ ${ENV_NAME} ]\\$\[\e[0m\] "
 	sed -i '$ a source \/usr\/lib\/salt-safeguard\/salt-safeguard.wrapper' ~/.bashrc
 	/bin/bash
 	sed -i '/^source \/usr\/lib\/salt-safeguard\/salt-safeguard.wrapper/d' ~/.bashrc

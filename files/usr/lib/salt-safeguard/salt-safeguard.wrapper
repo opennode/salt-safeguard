@@ -60,7 +60,7 @@ function salt-list() {
 			salt-list-states
 			;;
 		"hosts" | "minions")	
-			salt-list-hosts | tail -n +2 | sort
+			salt-list-hosts | sort
 			;;
 		*) echo "Unknown list target. Aborting."
 	esac	 

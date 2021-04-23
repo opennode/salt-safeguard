@@ -5,7 +5,7 @@ set -f
 [ -f /etc/salt/environments.d/${SALT_SAFEGUARD_ENV}.conf ] && source /etc/salt/environments.d/${SALT_SAFEGUARD_ENV}.conf
 
 function expand_targets() {
-	if [ -n "$( echo $1 | grep '\.' )" ] && [  "$( echo $1 | grep -o '\.' | wc -l )" -eq 2  ]; then
+	if [ -n "$( echo $1 | grep '\.' )" ] && [  "$( echo $1 | grep -o '\.' | wc -l )" -ge 2  ]; then
                 # if already FQDN - then just passthrough
                 TARGETSGLOB=$1
         elif [[ "$1" == $ENV_HOST_SHORTNAME_MASK ]] && [ -z "$( echo $1 | grep '\.')" ]; then
@@ -19,13 +19,13 @@ function expand_targets() {
 		TARGETSGLOB=$1
 	fi
 	# validate that expanded hostname is fqdn and passes environment hostname mask
-	if [  "$( echo $TARGETSGLOB | grep -o '\.' | wc -l )" -eq 2  ] && [[ "$TARGETSGLOB" == $ENV_HOST_SHORTNAME_MASK ]]; then
+	if [  "$( echo $TARGETSGLOB | grep -o '\.' | wc -l )" -ge 2  ] && [[ "$TARGETSGLOB" == $ENV_HOST_SHORTNAME_MASK ]]; then
 		# pass it on
 		TARGETSGLOB=$TARGETSGLOB
 		echo -e "\nTARGET(s): $TARGETSGLOB\n"
 	else
 		# fail
-		echo -e "\nERROR: hostname $TARGETSGLOB does not confirm to selected environment hostname mask (${ENV_HOST_SHORTNAME_MASK}.${ENV_HOST_DOMAIN})! Aborting!\n"
+		echo -e "\nERROR: hostname $TARGETSGLOB does not conform to selected environment hostname mask (${ENV_HOST_SHORTNAME_MASK}.${ENV_HOST_DOMAIN})! Aborting!\n"
 		TARGETSGLOB="FAILED"
 	fi
 }
